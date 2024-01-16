@@ -1,0 +1,10 @@
+[package]
+name = "dechat-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+#input = "0.8"
+#libc = "0.2.150"
+evdev = { git = "https://github.com/emberian/evdev" }
+anyhow = "1"
