@@ -1,40 +1,49 @@
 use std::hint::unreachable_unchecked;
+use std::path::PathBuf;
 use std::time::{Duration, SystemTime, SystemTimeError};
 
 use anyhow::Context;
-use evdev::{AttributeSet, EvdevEnum, EventSummary, KeyCode, uinput::VirtualDeviceBuilder};
+use env_logger::Env;
+use evdev::uinput::VirtualDevice;
+use evdev::{uinput::VirtualDeviceBuilder, AttributeSet, Device, EvdevEnum, EventSummary, KeyCode};
+use log::{error, info, warn};
 
-pub fn pick_device() -> anyhow::Result<evdev::Device> {
+pub fn pick_device() -> anyhow::Result<(PathBuf, Device)> {
     use std::io::prelude::*;
 
     let mut args = std::env::args_os();
     args.next();
     if let Some(dev_file) = args.next() {
-        Ok(evdev::Device::open(dev_file)?)
+        Ok((dev_file.clone().into(), Device::open(&dev_file)?))
     } else {
-        let mut devices = evdev::enumerate().map(|t| t.1).collect::<Vec<_>>();
+        let mut devices = evdev::enumerate().collect::<Vec<_>>();
         devices.reverse();
-        for (i, d) in devices.iter().enumerate() {
-            println!("{}: {}", i, d.name().unwrap_or("Unnamed device"));
+        for (i, (dev_file, device)) in devices.iter().enumerate() {
+            println!(
+                "{i}: {} ({})",
+                dev_file.display(),
+                device.name().unwrap_or("Unnamed device")
+            );
         }
         print!("Select the device [0-{}]: ", devices.len());
         let _ = std::io::stdout().flush();
         let mut chosen = String::new();
         std::io::stdin().read_line(&mut chosen).unwrap();
         let n = chosen.trim().parse::<usize>().unwrap();
-        Ok(devices.into_iter().nth(n).context("No n")?)
+
+        Ok(devices.into_iter().nth(n).context("Incorrect index")?)
     }
 }
 
 #[derive(Debug, Clone)]
 enum State {
     Pressed(SystemTime),
-    Released(SystemTime, Duration),
+    Released(SystemTime),
 }
 
 impl Default for State {
     fn default() -> Self {
-        State::Released(SystemTime::UNIX_EPOCH, Duration::from_secs(0))
+        State::Released(SystemTime::UNIX_EPOCH)
     }
 }
 
@@ -42,7 +51,7 @@ impl State {
     fn time(&self) -> SystemTime {
         match self {
             State::Pressed(ts) => *ts,
-            State::Released(ts, _) => *ts,
+            State::Released(ts) => *ts,
         }
     }
     fn duration_since(&self, now: &SystemTime) -> Result<Duration, SystemTimeError> {
@@ -51,7 +60,20 @@ impl State {
 }
 
 fn main() -> anyhow::Result<()> {
-    let mut orig_keyboard = pick_device()?;
+    let env = Env::default()
+        .filter_or("MY_LOG_LEVEL", "trace")
+        .write_style_or("MY_LOG_STYLE", "always");
+
+    env_logger::init_from_env(env);
+
+    let max_duration = Duration::from_millis(40);
+
+    let (dev_file, mut orig_keyboard) = pick_device()?;
+    info!(
+        "Picked the original keyboard: {}; path: {:?}",
+        orig_keyboard.name().unwrap_or("Unnamed device"),
+        dev_file
+    );
 
     let mut keys = AttributeSet::<KeyCode>::new();
     for supported_key in orig_keyboard
@@ -63,17 +85,16 @@ fn main() -> anyhow::Result<()> {
     }
 
     let mut fake_keyboard = VirtualDeviceBuilder::new()?
-        .name("Fake Keyboard")
+        .name("De-chattered Fake Keyboard")
         .with_keys(&keys)?
         .build()
         .unwrap();
 
-    for path in fake_keyboard.enumerate_dev_nodes_blocking()? {
-        let path = path?;
-        println!("Available as {}", path.display());
-    }
+    let paths = fake_keyboard.paths()?;
+    info!("Created a fake keyboard; it is available as {:?}", paths);
 
     orig_keyboard.grab()?;
+    info!("Grabbed the original keyboard");
 
     let mut tracker = vec![State::default(); 0x2ff + 1];
 
@@ -87,7 +108,7 @@ fn main() -> anyhow::Result<()> {
                     let since_previous = match state.duration_since(&now) {
                         Ok(value) => value,
                         Err(err) => {
-                            println!("Clock drift: {err}");
+                            error!("Clock drift: {err}");
                             fake_keyboard.emit(&[orig_event])?;
                             continue;
                         }
@@ -99,35 +120,46 @@ fn main() -> anyhow::Result<()> {
                         State::Pressed(ts) if is_key_down => {
                             // It was pressed and remains pressed; probably we would not like to throttle that
                             // Or we'd like to configure what key codes we need to throttle here
-                            if since_previous < Duration::from_millis(40) {
-                                println!("Throttle press {orig_event:?}");
+                            if since_previous < max_duration {
+                                warn!(
+                                    "Throttled repeated down-down {key_code:?}:{}; elapsed: {}",
+                                    key_code.code(),
+                                    since_previous.as_millis()
+                                );
                                 continue;
                             }
                             *ts = now;
                         }
                         State::Pressed(_) if !is_key_down => {
                             // It is released now; we change the state to released
-                            *state = State::Released(now, since_previous);
+                            *state = State::Released(now);
                             fake_keyboard.emit(&[orig_event])?;
                         }
-                        State::Released(_, _) if is_key_down => {
+                        State::Released(_) if is_key_down => {
                             // It was released some time ago and now it's pressed again
-
                             // Not to confuse the next State::Release statement we change the state always
                             *state = State::Pressed(now);
-                            if since_previous < Duration::from_millis(40) {
-                                println!("Throttle release {orig_event:?}");
+                            if since_previous < max_duration {
+                                warn!(
+                                    "Throttled repeated down-up {key_code:?}:{}; elapsed: {}",
+                                    key_code.code(),
+                                    since_previous.as_millis()
+                                );
                                 continue;
                             }
 
                             fake_keyboard.emit(&[orig_event])?;
                         }
-                        State::Released(_, _) if !is_key_down => {
+                        State::Released(_) if !is_key_down => {
                             // It was released twice? Did we loose an event? I'd say we do nothing
-                            println!("Double release; event {orig_event:?}; [{key_state}]");
+                            warn!(
+                                "Unconditionally throttled repeated up-up {key_code:?}:{}; elapsed: {} (elapsed is ignored)",
+                                key_code.code(),
+                                since_previous.as_millis()
+                            );
                             continue;
                         }
-                        _ => unsafe { unreachable_unchecked() }
+                        _ => unsafe { unreachable_unchecked() },
                     }
                 }
 
@@ -137,5 +169,19 @@ fn main() -> anyhow::Result<()> {
                 }
             }
         }
+    }
+}
+
+trait DeviceExt {
+    fn paths(&mut self) -> anyhow::Result<Vec<PathBuf>>;
+}
+
+impl DeviceExt for VirtualDevice {
+    fn paths(&mut self) -> anyhow::Result<Vec<PathBuf>> {
+        let mut paths = Vec::new();
+        for path in self.enumerate_dev_nodes_blocking()? {
+            paths.push(path?);
+        }
+        Ok(paths)
     }
 }
