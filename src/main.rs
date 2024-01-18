@@ -37,21 +37,21 @@ pub fn pick_device() -> anyhow::Result<(PathBuf, Device)> {
 
 #[derive(Debug, Clone)]
 enum State {
-    Pressed(SystemTime),
-    Released(SystemTime),
+    Down(SystemTime),
+    Up(SystemTime),
 }
 
 impl Default for State {
     fn default() -> Self {
-        State::Released(SystemTime::UNIX_EPOCH)
+        State::Up(SystemTime::UNIX_EPOCH)
     }
 }
 
 impl State {
     fn time(&self) -> SystemTime {
         match self {
-            State::Pressed(ts) => *ts,
-            State::Released(ts) => *ts,
+            State::Down(ts) => *ts,
+            State::Up(ts) => *ts,
         }
     }
     fn duration_since(&self, now: &SystemTime) -> Result<Duration, SystemTimeError> {
@@ -117,7 +117,7 @@ fn main() -> anyhow::Result<()> {
                     let is_key_down = key_state >= 1;
 
                     match state {
-                        State::Pressed(ts) if is_key_down => {
+                        State::Down(ts) if is_key_down => {
                             // It was pressed and remains pressed; probably we would not like to throttle that
                             // Or we'd like to configure what key codes we need to throttle here
                             if since_previous < max_duration {
@@ -128,17 +128,18 @@ fn main() -> anyhow::Result<()> {
                                 );
                                 continue;
                             }
+                            fake_keyboard.emit(&[orig_event])?;
                             *ts = now;
                         }
-                        State::Pressed(_) if !is_key_down => {
+                        State::Down(_) if !is_key_down => {
                             // It is released now; we change the state to released
-                            *state = State::Released(now);
+                            *state = State::Up(now);
                             fake_keyboard.emit(&[orig_event])?;
                         }
-                        State::Released(_) if is_key_down => {
+                        State::Up(_) if is_key_down => {
                             // It was released some time ago and now it's pressed again
                             // Not to confuse the next State::Release statement we change the state always
-                            *state = State::Pressed(now);
+                            *state = State::Down(now);
                             if since_previous < max_duration {
                                 warn!(
                                     "Throttled repeated down-up {key_code:?}:{}; elapsed: {}",
@@ -150,7 +151,7 @@ fn main() -> anyhow::Result<()> {
 
                             fake_keyboard.emit(&[orig_event])?;
                         }
-                        State::Released(_) if !is_key_down => {
+                        State::Up(_) if !is_key_down => {
                             // It was released twice? Did we loose an event? I'd say we do nothing
                             warn!(
                                 "Unconditionally throttled repeated up-up {key_code:?}:{}; elapsed: {} (elapsed is ignored)",
