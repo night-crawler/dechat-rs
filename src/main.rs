@@ -128,7 +128,7 @@ fn main() -> anyhow::Result<()> {
                                 );
                                 continue;
                             }
-                            fake_keyboard.emit(&[orig_event])?;
+                            // fake_keyboard.emit(&[orig_event])?;
                             *ts = now;
                         }
                         State::Down(_) if !is_key_down => {
