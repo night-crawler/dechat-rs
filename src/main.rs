@@ -1,8 +1,18 @@
+mod cmd;
+mod display;
+mod execute;
+mod r#trait;
+mod util;
+
 use std::hint::unreachable_unchecked;
 use std::path::PathBuf;
+use std::process::exit;
 use std::time::{Duration, SystemTime, SystemTimeError};
 
+use crate::cmd::Cli;
+use crate::r#trait::Execute;
 use anyhow::Context;
+use clap::Parser;
 use env_logger::Env;
 use evdev::uinput::VirtualDevice;
 use evdev::{uinput::VirtualDeviceBuilder, AttributeSet, Device, EvdevEnum, EventSummary, KeyCode};
@@ -12,6 +22,7 @@ pub fn pick_device() -> anyhow::Result<(PathBuf, Device)> {
     use std::io::prelude::*;
 
     let mut args = std::env::args_os();
+
     args.next();
     if let Some(dev_file) = args.next() {
         Ok((dev_file.clone().into(), Device::open(&dev_file)?))
@@ -60,13 +71,17 @@ impl State {
 }
 
 fn main() -> anyhow::Result<()> {
+    let args = Cli::try_parse()?;
+    args.execute()?;
+    exit(0);
+
     let env = Env::default()
-        .filter_or("MY_LOG_LEVEL", "trace")
-        .write_style_or("MY_LOG_STYLE", "always");
+        .filter_or("LOG_LEVEL", "trace")
+        .write_style_or("LOG_STYLE", "always");
 
     env_logger::init_from_env(env);
 
-    let max_duration = Duration::from_millis(40);
+    let max_duration = Duration::from_millis(60);
 
     let (dev_file, mut orig_keyboard) = pick_device()?;
     info!(
