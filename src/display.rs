@@ -74,14 +74,11 @@ impl<'a> DevicePrinter<'a> {
         }
 
         if self.display_opts.physical_path {
-            f.write_arg(
-                " physical_path",
-                device.physical_path().unwrap_or("No path"),
-            )?;
+            f.write_arg(" physical_path", device.physical_path().unwrap_or("?"))?;
         }
 
         if self.display_opts.name {
-            f.write_arg(" name", device.name().unwrap_or("Unnamed device"))?;
+            f.write_arg(" name", device.name().unwrap_or("?"))?;
         }
 
         if self.display_opts.id {
