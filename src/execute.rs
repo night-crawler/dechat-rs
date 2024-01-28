@@ -1,7 +1,7 @@
 use crate::cmd::{Cli, Command};
+use crate::device_wrapper::DeviceWrapper;
 use crate::display::{DevicePrinter, DisplayOpts};
 use crate::traits::Execute;
-use crate::util::get_devices;
 use anyhow::Context;
 
 impl Execute for Cli {
@@ -17,7 +17,7 @@ impl Execute for Command {
                 let mut stdout = std::io::stdout();
                 let display_opts = DisplayOpts::try_from(cmd)?;
 
-                for device in get_devices() {
+                for device in DeviceWrapper::list_wrapped_divices() {
                     DevicePrinter::new(&device, &display_opts).print(&mut stdout)?;
                 }
             }
@@ -29,7 +29,7 @@ impl Execute for Command {
                 index,
             } => {
                 let index = index.unwrap_or_default();
-                let device_wrapper = get_devices()
+                let device_wrapper = DeviceWrapper::list_wrapped_divices()
                     .into_iter()
                     .filter(|device_wrapper| {
                         path.iter()
@@ -49,7 +49,7 @@ impl Execute for Command {
                     .nth(index)
                     .with_context(|| "No device found for given filters")?;
 
-                let mut filter = device_wrapper.de_chatter(timeouts)?;
+                let mut filter = device_wrapper.build_key_filter(timeouts)?;
                 filter.block()?;
             }
         }

@@ -1,7 +1,7 @@
 use colored::Colorize;
 
 use crate::cmd::Command;
-use crate::util::DeviceWrapper;
+use crate::device_wrapper::DeviceWrapper;
 
 trait Colorizer<T> {
     fn write_arg(&mut self, key: &str, value: T) -> std::io::Result<()>;
@@ -11,6 +11,7 @@ impl<Q, T: std::fmt::Display> Colorizer<T> for Q
 where
     Q: std::io::Write,
 {
+    #[inline(always)]
     fn write_arg(&mut self, key: &str, value: T) -> std::io::Result<()> {
         write!(self, "{}={}", key.blue(), value.to_string().magenta())
     }
