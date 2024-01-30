@@ -4,7 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-env_logger = "0.10.1"
+env_logger = "0.11"
 evdev = { git = "https://github.com/emberian/evdev" }
 anyhow = "1"
-log = "0.4.20"
+log = "0.4"
+clap = { version = "4.4", features = ["derive", "env"] }
+colored = { version = "2" }
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
