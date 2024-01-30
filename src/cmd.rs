@@ -17,27 +17,27 @@ pub(super) struct Cli {
 pub(super) enum Command {
     /// List all input devices
     List {
-        /// Show path to input
+        /// Show the path to the input device
         #[arg(short, long, default_value = "true")]
         path: bool,
 
-        /// Show physical path
+        /// Show the physical path to the input device
         #[arg(short = 'P', long, default_value = "true")]
         physical_path: bool,
 
-        /// Show name
+        /// Show the name of the input device
         #[arg(short, long, default_value = "false")]
         name: bool,
 
-        /// Show bus, vendor, product, version
+        /// Show the bus, vendor, product, and version of the input device
         #[arg(short, long, default_value = "false")]
         id: bool,
 
-        /// Show all supported keys
+        /// Show all keys supported by the input device
         #[arg(short, long, default_value = "false")]
         keys: bool,
 
-        /// Enable all show flags: (-Ppnik)
+        /// Enable all flags: (-Ppnik)
         #[arg(short, long, default_value = "false")]
         all: bool,
     },
@@ -61,8 +61,8 @@ pub(super) enum Command {
         physical_path: Vec<Filter>,
 
         /// Take the device with this index after applying all filters
-        #[arg(short = 'i', long)]
-        index: Option<usize>,
+        #[arg(short = 'i', long, default_value_t = 0)]
+        index: usize,
     },
 }
 
@@ -86,7 +86,7 @@ impl Filter {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct KeyRangeTimeout {
     pub(super) range: RangeInclusive<u16>,
     pub(super) timeout: Duration,
@@ -107,7 +107,16 @@ fn parse_key_range(raw: &str) -> Result<KeyRangeTimeout, String> {
     };
 
     let range = parts[0]..=parts[1];
+    if range.is_empty() {
+        return Err(format!("Invalid empty range set for key range {}", raw));
+    }
+
     let timeout = Duration::from_millis(parts[2] as u64);
+
+    if timeout.as_millis() == 0 {
+        return Err(format!("Invalid zero timeout set for key range {}", raw));
+    }
+
     Ok(KeyRangeTimeout { range, timeout })
 }
 
@@ -120,5 +129,26 @@ fn parse_filter(raw: &str) -> Result<Filter, String> {
         Ok(Filter::Contains(Arc::new(raw.to_string())))
     } else {
         Ok(Filter::Equals(Arc::new(raw.to_string())))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_parse_key_range() {
+        use super::*;
+        assert_eq!(
+            parse_key_range("1:2:3").unwrap(),
+            KeyRangeTimeout {
+                range: 1..=2,
+                timeout: Duration::from_millis(3)
+            }
+        );
+
+        assert!(parse_key_range("1:2").is_err());
+        assert!(parse_key_range("1:2:3:4").is_err());
+        assert!(parse_key_range("0:0:0").is_err());
+        assert!(parse_key_range("0:0:1").is_ok());
+        assert!(parse_key_range("1:0:1").is_err());
     }
 }

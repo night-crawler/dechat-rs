@@ -88,7 +88,7 @@ impl KeyFilter {
     fn process_event_batch(&mut self) -> anyhow::Result<()> {
         let mut filtered = false;
         for orig_event in self.orig_keyboard.fetch_events()? {
-            if Self::should_filter(orig_event, &self.key_timeouts, &mut self.tracker) {
+            if should_filter(orig_event, &self.key_timeouts, &mut self.tracker) {
                 filtered = true;
                 let index = orig_event.code() as usize;
                 self.stats[index] = self.stats[index].saturating_add(1);
@@ -102,76 +102,6 @@ impl KeyFilter {
             self.print_stats();
         }
         Ok(())
-    }
-    fn should_filter(orig_event: InputEvent, key_timeouts: &[Option<Duration>], tracker: &mut [KeyState]) -> bool {
-        let (key_code, key_state) = match orig_event.destructure() {
-            EventSummary::Key(_, key_code, key_state) => (key_code, key_state),
-            _ => return false,
-        };
-        let Some(&Some(max_duration)) = key_timeouts.get(key_code.to_index()) else {
-            debug!("Key code {key_code:?} cannot be throttled");
-            return false;
-        };
-
-        let now = orig_event.timestamp();
-        let state = &mut tracker[key_code.to_index()];
-
-        let since_previous = match state.duration_since(&now) {
-            Ok(value) => value,
-            Err(err) => {
-                error!("Clock drift detected; skipping filtering: {err}");
-                return false;
-            }
-        };
-
-        let is_key_down = key_state >= 1;
-
-        match state {
-            KeyState::Down(ts) if is_key_down => {
-                // It was pressed and remains pressed; probably we would not like to throttle that
-                // Or we'd like to configure what key codes we need to throttle here
-                if since_previous < max_duration {
-                    debug!(
-                        "Throttled repeated down-down {key_code:?}:{}; elapsed: {}",
-                        key_code.code(),
-                        since_previous.as_millis()
-                    );
-                    return true;
-                }
-                *ts = now;
-                false
-            }
-            KeyState::Down(_) if !is_key_down => {
-                // It is released now; we change the state to Up;
-                *state = KeyState::Up(now);
-                false
-            }
-            KeyState::Up(_) if is_key_down => {
-                // It was released some time ago, and now it's pressed again
-                // Not to confuse the next State::Up statement we change the state always
-                // *state = KeyState::Down(*prev);
-                if since_previous < max_duration {
-                    debug!(
-                        "Throttled repeated up-down {key_code:?}:{}; elapsed: {}",
-                        key_code.code(),
-                        since_previous.as_millis()
-                    );
-                    return true;
-                }
-                *state = KeyState::Down(now);
-                false
-            }
-            KeyState::Up(_) if !is_key_down => {
-                // It was released twice? Did we loose an event? I'd say we do nothing
-                debug!(
-                    "Unconditionally throttled repeated up-up {key_code:?}:{}; elapsed: {} (elapsed is ignored)",
-                    key_code.code(),
-                    since_previous.as_millis()
-                );
-                true
-            }
-            _ => unsafe { unreachable_unchecked() },
-        }
     }
 
     fn print_stats(&mut self) {
@@ -194,5 +124,154 @@ impl KeyFilter {
         }
 
         info!("Throttled: {}", parts.join(", "));
+    }
+}
+
+fn should_filter(orig_event: InputEvent, key_timeouts: &[Option<Duration>], tracker: &mut [KeyState]) -> bool {
+    let (key_code, key_state) = match orig_event.destructure() {
+        EventSummary::Key(_, key_code, key_state) => (key_code, key_state),
+        _ => return false,
+    };
+    let Some(&Some(max_duration)) = key_timeouts.get(key_code.to_index()) else {
+        debug!("Key code {key_code:?} cannot be throttled");
+        return false;
+    };
+
+    let now = orig_event.timestamp();
+    let state = &mut tracker[key_code.to_index()];
+
+    let since_previous = match state.duration_since(&now) {
+        Ok(value) => value,
+        Err(err) => {
+            error!("Clock drift detected; skipping filtering: {err}");
+            return false;
+        }
+    };
+
+    let is_key_down = key_state >= 1;
+
+    match state {
+        KeyState::Down(ts) if is_key_down => {
+            // It was pressed and remains pressed; probably we would not like to throttle that
+            // Or we'd like to configure what key codes we need to throttle here
+            if since_previous < max_duration {
+                debug!(
+                    "Throttled repeated down-down {key_code:?}:{}; elapsed: {}",
+                    key_code.code(),
+                    since_previous.as_millis()
+                );
+                return true;
+            }
+            *ts = now;
+            false
+        }
+        KeyState::Down(_) if !is_key_down => {
+            // It is released now; we change the state to Up;
+            *state = KeyState::Up(now);
+            false
+        }
+        KeyState::Up(_) if is_key_down => {
+            // It was released some time ago, and now it's pressed again
+            // Not to confuse the next State::Up statement we change the state always
+            // *state = KeyState::Down(*prev);
+            if since_previous < max_duration {
+                debug!(
+                    "Throttled repeated up-down {key_code:?}:{}; elapsed: {}",
+                    key_code.code(),
+                    since_previous.as_millis()
+                );
+                return true;
+            }
+            *state = KeyState::Down(now);
+            false
+        }
+        KeyState::Up(_) if !is_key_down => {
+            // It was released twice? Did we loose an event? I'd say we do nothing
+            debug!(
+                "Unconditionally throttled repeated up-up {key_code:?}:{}; elapsed: {} (elapsed is ignored)",
+                key_code.code(),
+                since_previous.as_millis()
+            );
+            true
+        }
+        _ => unsafe { unreachable_unchecked() },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::SystemTime;
+
+    const DOWN: i32 = 1;
+    const UP: i32 = 0;
+    const EVENT_TYPE: u16 = 1;
+
+    fn prepare(state: i32) -> (InputEvent, Vec<KeyState>, [Option<Duration>; 2]) {
+        let input_event = InputEvent::new_now(EVENT_TYPE, 1, state);
+        let tracker = vec![KeyState::default(); 2];
+        let key_timeouts = [Some(Duration::from_millis(10)); 2];
+        (input_event, tracker, key_timeouts)
+    }
+
+    #[test]
+    fn test_should_filter_up_up() {
+        let (input_event, mut tracker, key_timeouts) = prepare(UP);
+        assert!(
+            should_filter(input_event, &key_timeouts, &mut tracker),
+            "Should always filter up-up events"
+        );
+        assert_eq!(
+            tracker[1].time(),
+            SystemTime::UNIX_EPOCH,
+            "Should NOT update the tracker"
+        );
+        assert!(
+            should_filter(input_event, &key_timeouts, &mut tracker),
+            "Should filter the second down event"
+        );
+    }
+    #[test]
+    fn test_should_filter_up_down() {
+        let (input_event, mut tracker, key_timeouts) = prepare(DOWN);
+        assert!(
+            !should_filter(input_event, &key_timeouts, &mut tracker),
+            "Should not filter the first down event"
+        );
+        assert_ne!(tracker[1].time(), SystemTime::UNIX_EPOCH, "Should update the tracker");
+        assert!(
+            should_filter(input_event, &key_timeouts, &mut tracker),
+            "Should filter the second down event"
+        );
+    }
+
+    #[test]
+    fn test_should_filter_down_down() {
+        let (input_event, mut tracker, key_timeouts) = prepare(DOWN);
+        tracker[1] = KeyState::Down(SystemTime::UNIX_EPOCH);
+        assert!(
+            !should_filter(input_event, &key_timeouts, &mut tracker),
+            "Should not filter the first down event"
+        );
+        assert_ne!(tracker[1].time(), SystemTime::UNIX_EPOCH, "Should update the tracker");
+        assert!(
+            should_filter(input_event, &key_timeouts, &mut tracker),
+            "Should filter the second down event"
+        );
+    }
+
+    #[test]
+    fn test_should_filter_down_up() {
+        let (input_event, mut tracker, key_timeouts) = prepare(UP);
+        tracker[1] = KeyState::Down(SystemTime::UNIX_EPOCH);
+        assert!(
+            !should_filter(input_event, &key_timeouts, &mut tracker),
+            "Should not filter the first down event"
+        );
+        assert_ne!(tracker[1].time(), SystemTime::UNIX_EPOCH, "Should update the tracker");
+        assert!(
+            should_filter(input_event, &key_timeouts, &mut tracker),
+            "Should filter the second down event"
+        );
     }
 }

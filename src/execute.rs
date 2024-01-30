@@ -2,7 +2,6 @@ use crate::cmd::{Cli, Command, Filter};
 use crate::device_wrapper::DeviceWrapper;
 use crate::display::{DevicePrinter, DisplayOpts};
 use crate::traits::Execute;
-use anyhow::Context;
 use log::info;
 
 impl Execute for Cli {
@@ -37,7 +36,6 @@ impl Execute for Command {
                         device.path.display()
                     );
                 }
-                let index = index.unwrap_or_default();
                 if index >= device_wrappers.len() {
                     anyhow::bail!("No device found for given filters");
                 }
