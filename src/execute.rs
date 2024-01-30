@@ -36,15 +36,13 @@ impl Execute for Command {
                             .all(|filter| filter.matches(device_wrapper.path.display().to_string()))
                     })
                     .filter(|device_wrapper| {
-                        name.iter().all(|filter| {
-                            filter.matches(device_wrapper.device.name().unwrap_or_default())
-                        })
+                        name.iter()
+                            .all(|filter| filter.matches(device_wrapper.device.name().unwrap_or_default()))
                     })
                     .filter(|device_wrapper| {
-                        physical_path.iter().all(|filter| {
-                            filter
-                                .matches(device_wrapper.device.physical_path().unwrap_or_default())
-                        })
+                        physical_path
+                            .iter()
+                            .all(|filter| filter.matches(device_wrapper.device.physical_path().unwrap_or_default()))
                     })
                     .nth(index)
                     .with_context(|| "No device found for given filters")?;

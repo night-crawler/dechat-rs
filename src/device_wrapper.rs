@@ -49,15 +49,8 @@ impl DeviceWrapper {
         Ok(fake_keyboard)
     }
 
-    pub(super) fn build_key_filter(
-        self,
-        timeouts: Vec<KeyRangeTimeout>,
-    ) -> anyhow::Result<KeyFilter> {
-        info!(
-            "Picked the original keyboard: {}; path: {:?}",
-            self.name(),
-            self.path
-        );
+    pub(super) fn build_key_filter(self, timeouts: Vec<KeyRangeTimeout>) -> anyhow::Result<KeyFilter> {
+        info!("Picked the original keyboard: {}; path: {:?}", self.name(), self.path);
 
         let mut fake_keyboard = self.create_fake_keyboard()?;
 
@@ -68,9 +61,7 @@ impl DeviceWrapper {
     }
 
     pub(super) fn list_wrapped_divices() -> Vec<DeviceWrapper> {
-        let mut devices = evdev::enumerate()
-            .map(DeviceWrapper::from)
-            .collect::<Vec<_>>();
+        let mut devices = evdev::enumerate().map(DeviceWrapper::from).collect::<Vec<_>>();
         devices.sort_unstable();
         devices
     }

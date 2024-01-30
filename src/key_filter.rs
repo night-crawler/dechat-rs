@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 
 use evdev::uinput::VirtualDevice;
 use evdev::{Device, EvdevEnum, EventSummary, InputEvent, KeyCode};
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 
 use crate::cmd::KeyRangeTimeout;
 use crate::key_state::KeyState;
@@ -18,11 +18,7 @@ pub(super) struct KeyFilter {
 }
 
 impl KeyFilter {
-    pub(super) fn new(
-        timeouts: Vec<KeyRangeTimeout>,
-        orig_keyboard: Device,
-        fake_keyboard: VirtualDevice,
-    ) -> Self {
+    pub(super) fn new(timeouts: Vec<KeyRangeTimeout>, orig_keyboard: Device, fake_keyboard: VirtualDevice) -> Self {
         let max_keyboard_code = orig_keyboard
             .supported_keys()
             .iter()
@@ -43,12 +39,18 @@ impl KeyFilter {
         for key_range_timeout in timeouts {
             for key_code in key_range_timeout.range.clone().map(usize::from) {
                 if key_code >= required_size {
-                    warn!("Key code from provided range {:?} is out of keyboard's range: keyboard has {} key codes", key_range_timeout, max_keyboard_code);
+                    warn!(
+                        "Key code {} from provided range {:?} is out of keyboard's range: keyboard has {} key codes",
+                        key_code, key_range_timeout, max_keyboard_code
+                    );
                     break;
                 }
 
                 if let Some(timeout) = key_timeouts[key_code] {
-                    warn!("Key code {:?} is already throttled with timeout {:?}, ignoring the new timeout {:?}", key_code, timeout, key_range_timeout.timeout);
+                    warn!(
+                        "Key code {:?} is already throttled with timeout {:?}, ignoring the new timeout {:?}",
+                        key_code, timeout, key_range_timeout.timeout
+                    );
                     continue;
                 }
 
@@ -67,8 +69,16 @@ impl KeyFilter {
     }
 
     pub(super) fn block(&mut self) -> anyhow::Result<()> {
+        // We are skipping them because otherwise if we start the program from terminal, the last enter key we press
+        // gets stuck, and also it alarms the touchegg service: Touchpad: kernel bug: Touch jump detected and discarded.
+        for event in self.orig_keyboard.fetch_events()? {
+            info!("Skipping {:?}", event);
+        }
         self.orig_keyboard.grab()?;
-        info!("Grabbed the original keyboard");
+        info!(
+            "Grabbed the original keyboard: {}",
+            self.orig_keyboard.physical_path().unwrap_or_default()
+        );
 
         loop {
             self.process_event_batch()?;
@@ -84,6 +94,7 @@ impl KeyFilter {
                 self.stats[index] = self.stats[index].saturating_add(1);
                 continue;
             }
+            trace!("Forwarding {:?}", orig_event);
             self.fake_keyboard.emit(&[orig_event])?;
         }
 
@@ -92,11 +103,7 @@ impl KeyFilter {
         }
         Ok(())
     }
-    fn should_filter(
-        orig_event: InputEvent,
-        key_timeouts: &[Option<Duration>],
-        tracker: &mut [KeyState],
-    ) -> bool {
+    fn should_filter(orig_event: InputEvent, key_timeouts: &[Option<Duration>], tracker: &mut [KeyState]) -> bool {
         let (key_code, key_state) = match orig_event.destructure() {
             EventSummary::Key(_, key_code, key_state) => (key_code, key_state),
             _ => return false,
@@ -158,9 +165,9 @@ impl KeyFilter {
                 // It was released twice? Did we loose an event? I'd say we do nothing
                 debug!(
                     "Unconditionally throttled repeated up-up {key_code:?}:{}; elapsed: {} (elapsed is ignored)",
-                        key_code.code(),
-                        since_previous.as_millis()
-                    );
+                    key_code.code(),
+                    since_previous.as_millis()
+                );
                 true
             }
             _ => unsafe { unreachable_unchecked() },

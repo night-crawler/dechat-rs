@@ -57,14 +57,8 @@ pub(super) struct DevicePrinter<'a> {
 }
 
 impl<'a> DevicePrinter<'a> {
-    pub(super) fn new(
-        wrapper: &'a DeviceWrapper,
-        display_opts: &'a DisplayOpts,
-    ) -> DevicePrinter<'a> {
-        Self {
-            wrapper,
-            display_opts,
-        }
+    pub(super) fn new(wrapper: &'a DeviceWrapper, display_opts: &'a DisplayOpts) -> DevicePrinter<'a> {
+        Self { wrapper, display_opts }
     }
 
     pub(super) fn print(&self, f: &mut impl std::io::Write) -> std::io::Result<()> {
