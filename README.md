@@ -12,6 +12,26 @@ bounces, like in "retr**t**ack", "plau**l**sible", "pottery**y**", etc.
 
 This approach ensures that no key code repeats within a predefined time frame.
 
+## Installation
+
+Install [cargo-arch](https://github.com/wdv4758h/cargo-arch)
+
+```bash 
+cargo install cargo-arch
+```
+
+Run build:
+
+```bash
+cargo arch
+```
+
+Install the package:
+
+```bash
+sudo pacman -U dechat-rs-0.1.0-1-x86_64.pkg.tar.zst
+```
+
 ## Usage
 
 Root access is required.
@@ -24,12 +44,12 @@ Devices are sorted by bus, vendor, product, version, name, and path for consiste
 Usage: dechat-rs list [OPTIONS]
 
 Options:
-  -p, --path           Show path to input
-  -P, --physical-path  Show physical path
-  -n, --name           Show name
-  -i, --id             Show bus, vendor, product, version
-  -k, --keys           Show all supported keys
-  -a, --all            Enable all show flags: (-Ppnik)
+  -p, --path           Show the path to the input device
+  -P, --physical-path  Show the physical path to the input device
+  -n, --name           Show the name of the input device
+  -i, --id             Show the bus, vendor, product, and version of the input device
+  -k, --keys           Show all keys supported by the input device
+  -a, --all            Enable all flags: (-Ppnik)
   -h, --help           Print help
   -V, --version        Print version
 ```
@@ -37,9 +57,8 @@ Options:
 List all devices: 
 
 ```bash
-sudo ./target/debug/dechat-rs list
+sudo dechat-rs list
 ```
-
 ```
 path=/dev/input/event9 physical_path=ALSA
 path=/dev/input/event11 physical_path=ALSA
@@ -52,9 +71,9 @@ path=/dev/input/event12 physical_path=?
 List all devices with names and supported keys:
 
 ```bash
-sudo ./target/debug/dechat-rs list -Ppnik
+sudo dechat-rs list -Ppnik
 # or 
-sudo ./target/debug/dechat-rs list -a
+sudo dechat-rs list -a
 ```
 
 ```
@@ -85,7 +104,7 @@ sudo dechat-rs de-chatter -t 0:1000:70 -n s:'Asus'
 Pass throttling timeouts with key codes to filter. Format: `start_code_inclusive:end_code_inclusive:timeout`, e.g.:
 
 ```bash
-sudo -E ./target/release/dechat-rs de-chatter -t 0:1000:70 -n 'Asus Keyboard' -P 'usb-0000:04:00.3-3/input2'
+sudo -E dechat-rs de-chatter -t 0:1000:70 -n 'Asus Keyboard' -P 'usb-0000:04:00.3-3/input2'
 ```
 
 If the specified range is too large, it will be adjusted to the maximum supported range.

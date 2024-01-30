@@ -2,6 +2,10 @@
 name = "dechat-rs"
 version = "0.1.0"
 edition = "2021"
+description = "Debounce / de-chattering utility for key input devices"
+authors = ["night-crawler"]
+license = "MIT"
+readme = "README.md"
 
 [dependencies]
 env_logger = "0.11"

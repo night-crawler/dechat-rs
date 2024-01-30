@@ -1,2 +1,5 @@
 /target
 .idea
+PKGBUILD
+/pkg/
+/dechat-rs**zst
