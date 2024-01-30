@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use clap::{Parser, Subcommand};
 
-/// Debounce / de-chattering tool for input devices.
+/// Debounce / de-chattering utility for key input devices.
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 #[command(propagate_version = true)]
@@ -22,7 +22,7 @@ pub(super) enum Command {
         path: bool,
 
         /// Show physical path
-        #[arg(short = 'y', long, default_value = "true")]
+        #[arg(short = 'P', long, default_value = "true")]
         physical_path: bool,
 
         /// Show name
@@ -37,7 +37,7 @@ pub(super) enum Command {
         #[arg(short, long, default_value = "false")]
         keys: bool,
 
-        /// Show everything
+        /// Enable all show flags: (-Ppnik)
         #[arg(short, long, default_value = "false")]
         all: bool,
     },
@@ -57,7 +57,7 @@ pub(super) enum Command {
         path: Vec<Filter>, // TODO: path filter must be PathBuf/OsString, not String
 
         /// Filter devices by physical path (repeatable)
-        #[arg(short = 'y', long, value_parser = parse_filter)]
+        #[arg(short = 'P', long, value_parser = parse_filter)]
         physical_path: Vec<Filter>,
 
         /// Take the device with this index after applying all filters

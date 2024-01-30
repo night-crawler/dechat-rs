@@ -18,7 +18,14 @@ fn main() -> anyhow::Result<()> {
         .write_style_or("LOG_STYLE", "always");
     env_logger::init_from_env(env);
 
-    let args = Cli::try_parse()?;
-    args.execute()?;
+    match Cli::try_parse() {
+        Ok(args) => {
+            args.execute()?;
+        }
+        Err(err) => {
+            err.exit();
+        }
+    }
+
     Ok(())
 }
