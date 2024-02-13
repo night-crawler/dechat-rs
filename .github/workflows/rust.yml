@@ -42,12 +42,6 @@ jobs:
     name: Amd64Arch
     steps:
       - uses: actions/checkout@v4
-      - name: Set up rust
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-      - run: source "$HOME/.cargo/env"
-      - name: Set up arch
-        run: cargo install cargo-arch
       - name: Build pkg
         run: cargo arch
       - name: Upload pkg
