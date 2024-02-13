@@ -41,6 +41,7 @@ jobs:
     container: ghcr.io/night-crawler/rust-arch:main
     name: Amd64Arch
     steps:
+      - run: whoami
       - uses: actions/checkout@v4
       - name: Build pkg
         run: cargo arch
