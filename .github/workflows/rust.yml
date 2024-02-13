@@ -11,9 +11,7 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
     - name: Build
@@ -27,12 +25,12 @@ jobs:
     name: Amd64Deb
     steps:
       - uses: actions/checkout@v2
-      - name: build .deb file
-        uses: sassman/rust-deb-builder@v1
-        with:
-          target: x86_64-unknown-linux-gnu
-      - name: Upload Deb Artifact
+      - name: Set up deb
+        run: cargo install cargo-deb
+      - name: Build deb
+        run: cargo deb
+      - name: Upload deb
         uses: actions/upload-artifact@v2
         with:
-          name: amd64deb
-          path: ./target/x86_64-unknown-linux-gnu/debian/*.deb
+          name: deb
+          path: target/debian/*.deb
