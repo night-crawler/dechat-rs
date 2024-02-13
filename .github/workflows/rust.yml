@@ -13,6 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    - run: cargo install cargo-get
     - uses: actions/checkout@v4
     - name: Build
       run: cargo build --verbose
@@ -25,14 +26,20 @@ jobs:
     name: Amd64Deb
     steps:
       - uses: actions/checkout@v4
+      - run: git fetch --tags -f
+      - name: Resolve version
+        id: vars
+        run: |
+          echo "TAG_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
       - name: Set up deb
         run: cargo install cargo-deb
       - name: Build deb
         run: cargo deb
       - name: Release
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/')g
         with:
+          tag_name: ${{ env.TAG_NAME }}
           files: target/debian/*.deb
           fail_on_unmatched_files: true
 #      - name: Upload deb
