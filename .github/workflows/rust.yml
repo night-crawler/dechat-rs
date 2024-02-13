@@ -23,6 +23,8 @@ jobs:
       run: cargo test --verbose
 
   debbuild:
+    permissions:
+      contents: write
     needs: [ build ]
     runs-on: ubuntu-latest
     name: Amd64Deb
@@ -45,6 +47,8 @@ jobs:
 #          path: target/debian/*.deb
 
   archbuild:
+    permissions:
+      contents: write
     needs: [ build ]
     runs-on: ubuntu-latest
     container: ghcr.io/night-crawler/rust-arch:main
