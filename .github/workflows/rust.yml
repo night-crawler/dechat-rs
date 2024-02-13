@@ -38,14 +38,12 @@ jobs:
   archbuild:
     needs: [ build ]
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/night-crawler/rust-arch:main
-      options: --user user
+    container: ghcr.io/night-crawler/rust-arch:main
     name: Amd64Arch
     steps:
       - uses: actions/checkout@v4
       - name: Build pkg
-        run: cargo arch
+        run: sudo -Eu user cargo arch
       - name: Upload pkg
         uses: actions/upload-artifact@v2
         with:
