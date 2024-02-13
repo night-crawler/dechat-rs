@@ -38,7 +38,7 @@ jobs:
   archbuild:
     needs: [ build ]
     runs-on: ubuntu-latest
-    container: archlinux
+    container: ghcr.io/night-crawler/rust-arch
     name: Amd64Arch
     steps:
       - uses: actions/checkout@v4
