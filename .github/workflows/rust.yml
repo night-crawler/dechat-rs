@@ -34,3 +34,22 @@ jobs:
         with:
           name: dechat-rs.deb
           path: target/debian/*.deb
+
+  archbuild:
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    container: archlinux
+    name: Amd64Arch
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up rust
+        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+      - name: Set up arch
+        run: cargo install cargo-arch
+      - name: Build pkg
+        run: cargo arch
+      - name: Upload pkg
+        uses: actions/upload-artifact@v2
+        with:
+          name: dechat-rs.pkg.tar.zst
+          path: ./*.pkg.tar.zst
