@@ -14,6 +14,28 @@ This approach ensures that no key code repeats within a predefined time frame.
 
 ## Installation
 
+## Latest debian releases
+
+```bash
+curl https://api.github.com/repos/night-crawler/dechat-rs/releases/latest | \
+  jq '.assets[] | select(.name | contains("deb")) | .browser_download_url' | \
+  tr -d \" | \
+  wget -qi -
+dpkg -i dechat-rs_*.deb
+```
+
+## Latest ArchLinux releases
+
+```bash
+curl https://api.github.com/repos/night-crawler/dechat-rs/releases/latest | \
+  jq '.assets[] | select(.name | contains("pkg.tar.zst")) | .browser_download_url' | \
+  tr -d \" | \
+  wget -qi -
+sudo pacman -U dechat-rs-*.pkg.tar.zst
+````
+
+## From sources (arch)
+
 Install [cargo-arch](https://github.com/wdv4758h/cargo-arch)
 
 ```bash 
