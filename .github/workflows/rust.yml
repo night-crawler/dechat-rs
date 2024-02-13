@@ -29,11 +29,15 @@ jobs:
         run: cargo install cargo-deb
       - name: Build deb
         run: cargo deb
-      - name: Upload deb
-        uses: actions/upload-artifact@v2
+      - name: Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: dechat-rs.deb
-          path: target/debian/*.deb
+          files: target/debian/*.deb
+#      - name: Upload deb
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: dechat-rs.deb
+#          path: target/debian/*.deb
 
   archbuild:
     needs: [ build ]
@@ -45,8 +49,12 @@ jobs:
       - name: Build pkg
         run: |
           chown -hR user: {./,/usr/local/cargo,/root} && sudo -Eu user cargo arch
-      - name: Upload pkg
-        uses: actions/upload-artifact@v2
+      - name: Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: dechat-rs.pkg.tar.zst
-          path: ./*.pkg.tar.zst
+          files: ./*.pkg.tar.zst
+#      - name: Upload pkg
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: dechat-rs.pkg.tar.zst
+#          path: ./*.pkg.tar.zst
