@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Build
       run: cargo build --verbose
     - name: Run tests
@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Amd64Deb
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Set up deb
         run: cargo install cargo-deb
       - name: Build deb
@@ -32,5 +32,21 @@ jobs:
       - name: Upload deb
         uses: actions/upload-artifact@v2
         with:
-          name: deb
+          name: dechat-rs.deb
           path: target/debian/*.deb
+
+  archbuild:
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    name: Amd64Arch
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up arch
+        run: cargo install cargo-arch
+      - name: Build pkg
+        run: cargo arch
+      - name: Upload pkg
+        uses: actions/upload-artifact@v2
+        with:
+          name: dechat-rs.pkg.tar.zst
+          path: ./*.pkg.tar.zst
