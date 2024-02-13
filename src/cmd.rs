@@ -68,20 +68,20 @@ pub(super) enum Command {
 
 #[derive(Debug, Clone)]
 pub(super) enum Filter {
-    StartsWidth(Arc<String>),
-    Equals(Arc<String>),
-    Contains(Arc<String>),
-    EndsWidth(Arc<String>),
+    StartsWidth(Arc<str>),
+    Equals(Arc<str>),
+    Contains(Arc<str>),
+    EndsWidth(Arc<str>),
 }
 
 impl Filter {
     pub(super) fn matches(&self, raw: impl AsRef<str>) -> bool {
         let raw = raw.as_ref();
         match self {
-            Filter::StartsWidth(filter) => raw.starts_with(filter.as_str()),
-            Filter::Equals(filter) => raw == filter.as_str(),
-            Filter::Contains(filter) => raw.contains(filter.as_str()),
-            Filter::EndsWidth(filter) => raw.ends_with(filter.as_str()),
+            Filter::StartsWidth(filter) => raw.starts_with(filter.as_ref()),
+            Filter::Equals(filter) => raw == filter.as_ref(),
+            Filter::Contains(filter) => raw.contains(filter.as_ref()),
+            Filter::EndsWidth(filter) => raw.ends_with(filter.as_ref()),
         }
     }
 }
@@ -122,13 +122,13 @@ fn parse_key_range(raw: &str) -> Result<KeyRangeTimeout, String> {
 
 fn parse_filter(raw: &str) -> Result<Filter, String> {
     if let Some(raw) = raw.strip_prefix("s:") {
-        Ok(Filter::StartsWidth(Arc::new(raw.to_string())))
+        Ok(Filter::StartsWidth(raw.into()))
     } else if let Some(raw) = raw.strip_prefix("e:") {
-        Ok(Filter::EndsWidth(Arc::new(raw.to_string())))
+        Ok(Filter::EndsWidth(raw.into()))
     } else if let Some(raw) = raw.strip_prefix("c:") {
-        Ok(Filter::Contains(Arc::new(raw.to_string())))
+        Ok(Filter::Contains(raw.into()))
     } else {
-        Ok(Filter::Equals(Arc::new(raw.to_string())))
+        Ok(Filter::Equals(raw.into()))
     }
 }
 
@@ -141,7 +141,7 @@ mod tests {
             parse_key_range("1:2:3").unwrap(),
             KeyRangeTimeout {
                 range: 1..=2,
-                timeout: Duration::from_millis(3)
+                timeout: Duration::from_millis(3),
             }
         );
 
