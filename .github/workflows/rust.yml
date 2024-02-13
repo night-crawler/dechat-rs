@@ -36,7 +36,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          tag_name: ${{ env.TAG_NAME }}
           files: target/debian/*.deb
           fail_on_unmatched_files: true
 #      - name: Upload deb
