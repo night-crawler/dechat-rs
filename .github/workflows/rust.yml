@@ -43,7 +43,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build pkg
-        run: sudo -Eu user cargo arch
+        run: |
+          chown -hR user: {./,/usr/local/cargo,/root} && sudo -Eu user cargo arch
       - name: Upload pkg
         uses: actions/upload-artifact@v2
         with:
