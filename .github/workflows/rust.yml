@@ -31,9 +31,10 @@ jobs:
         run: cargo deb
       - name: Release
         uses: softprops/action-gh-release@v1
-#        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: target/debian/*.deb
+          fail_on_unmatched_files: true
 #      - name: Upload deb
 #        uses: actions/upload-artifact@v2
 #        with:
@@ -52,9 +53,10 @@ jobs:
           chown -hR user: {./,/usr/local/cargo,/root} && sudo -Eu user cargo arch
       - name: Release
         uses: softprops/action-gh-release@v1
-#        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: ./*.pkg.tar.zst
+          fail_on_unmatched_files: true
 #      - name: Upload pkg
 #        uses: actions/upload-artifact@v2
 #        with:
