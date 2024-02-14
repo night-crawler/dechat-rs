@@ -15,10 +15,16 @@ pub(super) struct KeyFilter {
     fake_keyboard: VirtualDevice,
     stats: Vec<usize>,
     last_stats_printed: Instant,
+    skip_first: bool,
 }
 
 impl KeyFilter {
-    pub(super) fn new(timeouts: Vec<KeyRangeTimeout>, orig_keyboard: Device, fake_keyboard: VirtualDevice) -> Self {
+    pub(super) fn new(
+        timeouts: Vec<KeyRangeTimeout>,
+        orig_keyboard: Device,
+        fake_keyboard: VirtualDevice,
+        skip_first: bool,
+    ) -> Self {
         let max_keyboard_code = orig_keyboard
             .supported_keys()
             .iter()
@@ -65,15 +71,17 @@ impl KeyFilter {
             orig_keyboard,
             fake_keyboard,
             last_stats_printed: Instant::now(),
+            skip_first,
         }
     }
 
     pub(super) fn block(&mut self) -> anyhow::Result<()> {
-        // We are skipping them because otherwise if we start the program from terminal, the last enter key we press
-        // gets stuck, and also it alarms the touchegg service: Touchpad: kernel bug: Touch jump detected and discarded.
-        for event in self.orig_keyboard.fetch_events()? {
-            info!("Skipping {:?}", event);
+        if self.skip_first {
+            for event in self.orig_keyboard.fetch_events()? {
+                info!("Skipping {:?}", event);
+            }
         }
+
         self.orig_keyboard.grab()?;
         info!(
             "Grabbed the original keyboard: {}",

@@ -64,6 +64,12 @@ pub(super) enum Command {
         /// Take the device with this index after applying all filters
         #[arg(short = 'i', long, default_value_t = 0)]
         index: usize,
+
+        /// Skip the first event batch: if we start the program is started from terminal,
+        /// the last ENTER key we press gets stuck, and also it alarms the touchegg service -
+        /// `Touchpad: kernel bug: Touch jump detected and discarded.`
+        #[arg(short = 's', long, default_value_t = false)]
+        skip_first: bool,
     },
 }
 

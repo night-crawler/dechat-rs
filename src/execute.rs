@@ -27,6 +27,7 @@ impl Execute for Command {
                 path,
                 physical_path,
                 index,
+                skip_first,
             } => {
                 let mut device_wrappers = get_filtered_devices(&name, &path, &physical_path);
                 for (index, device) in device_wrappers.iter().enumerate() {
@@ -41,7 +42,7 @@ impl Execute for Command {
                     anyhow::bail!("No device found for given filters");
                 }
                 let device_wrapper = device_wrappers.swap_remove(index);
-                let mut filter = device_wrapper.build_key_filter(timeouts)?;
+                let mut filter = device_wrapper.build_key_filter(timeouts, skip_first)?;
                 filter.block()?;
             }
         }
@@ -50,7 +51,11 @@ impl Execute for Command {
     }
 }
 
-fn get_filtered_devices(name: &[StringFilter], path: &[StringFilter], physical_path: &[StringFilter]) -> Vec<DeviceWrapper> {
+fn get_filtered_devices(
+    name: &[StringFilter],
+    path: &[StringFilter],
+    physical_path: &[StringFilter],
+) -> Vec<DeviceWrapper> {
     DeviceWrapper::list_wrapped_divices()
         .into_iter()
         .filter(|device_wrapper| {
