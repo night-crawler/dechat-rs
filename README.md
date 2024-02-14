@@ -14,17 +14,17 @@ This approach ensures that no key code repeats within a predefined time frame.
 
 ## Installation
 
-## Latest debian releases
+## Latest Debian releases (GitHub releases)
 
 ```bash
 curl https://api.github.com/repos/night-crawler/dechat-rs/releases/latest | \
   jq '.assets[] | select(.name | contains("deb")) | .browser_download_url' | \
   tr -d \" | \
   wget -qi -
-dpkg -i dechat-rs_*.deb
+sudo dpkg -i dechat-rs_*.deb
 ```
 
-## Latest ArchLinux releases
+## Latest Arch Linux releases (GitHub releases)
 
 ```bash
 curl https://api.github.com/repos/night-crawler/dechat-rs/releases/latest | \
@@ -36,11 +36,24 @@ sudo pacman -U dechat-rs-*.pkg.tar.zst
 
 ## From sources (arch)
 
+Install rust:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
 Install [cargo-arch](https://github.com/wdv4758h/cargo-arch)
 
 ```bash 
 cargo install cargo-arch
 ```
+
+Checkout the repository:
+
+```bash
+git clone https://github.com/night-crawler/dechat-rs/
+cd dechat-rs
+````
 
 Run build:
 
@@ -51,7 +64,7 @@ cargo arch
 Install the package:
 
 ```bash
-sudo pacman -U dechat-rs-0.1.0-1-x86_64.pkg.tar.zst
+sudo pacman -U dechat-rs-*.pkg.tar.zst
 ```
 
 ## Usage
@@ -136,3 +149,53 @@ Periodically, the tool will display statistics about the number of throttled eve
 ``` 
 [2024-01-30T16:58:33Z INFO  dechat_rs::key_filter] Throttled: KEY_BACKSPACE:14x13, KEY_E:18x2, KEY_Y:21x2, KEY_O:24x2, KEY_ENTER:28x10, KEY_LEFTCTRL:29x135, KEY_LEFTSHIFT:42x73, KEY_N:49x2, KEY_LEFTALT:56x6, KEY_UP:103x44, KEY_LEFT:105x10, KEY_RIGHT:106x19, KEY_DOWN:108x223
 ```
+
+### Systemd service
+
+Copy the dechat-rs service unit to the systemd directory:
+
+```bash
+sudo curl https://raw.githubusercontent.com/night-crawler/dechat-rs/main/dechat.service -o /lib/systemd/system/dechat.service
+```
+
+Or create a new file with the following content:
+
+```
+[Unit]
+Description=Keyboard DeChattering Service
+
+[Service]
+ExecStart=/usr/bib/dechat-rs de-chatter -t 0:1000:70 -n s:'Asus Keyboard' -P 'usb-0000:04:00.3-3/input2'
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Find out the right keyboard you are using and edit the service file accordingly:
+
+```bash
+sudo systemctl edit dechat.service
+```
+
+Run de-chattering:
+
+```bash
+sudo systemctl enable dechat --now
+```
+
+Check if the service is running:
+
+```bash
+sudo systemctl status dechat
+```
+
+```bash 
+journalctl -xefu dechat.service
+```
+
+### Udev 
+
+TODO

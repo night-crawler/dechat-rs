@@ -189,7 +189,7 @@ dependencies = [
 [[package]]
 name = "evdev"
 version = "0.12.1"
-source = "git+https://github.com/emberian/evdev#8feea0685b0acb8153e394ffc393cf560d30a16f"
+source = "git+https://github.com/emberian/evdev?rev=8feea0685b0acb8153e394ffc393cf560d30a16f#8feea0685b0acb8153e394ffc393cf560d30a16f"
 dependencies = [
  "bitvec",
  "cfg-if",

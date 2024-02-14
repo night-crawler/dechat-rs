@@ -1,4 +1,4 @@
-use crate::cmd::{Cli, Command, Filter};
+use crate::cmd::{Cli, Command, StringFilter};
 use crate::device_wrapper::DeviceWrapper;
 use crate::display::{DevicePrinter, DisplayOpts};
 use crate::traits::Execute;
@@ -31,8 +31,9 @@ impl Execute for Command {
                 let mut device_wrappers = get_filtered_devices(&name, &path, &physical_path);
                 for (index, device) in device_wrappers.iter().enumerate() {
                     info!(
-                        "A device with index={index} after applying filters: {} [{}]",
+                        "A device with index={index} after applying filters: {} {} [{}]",
                         device.name(),
+                        device.device.physical_path().unwrap_or_default(),
                         device.path.display()
                     );
                 }
@@ -49,7 +50,7 @@ impl Execute for Command {
     }
 }
 
-fn get_filtered_devices(name: &[Filter], path: &[Filter], physical_path: &[Filter]) -> Vec<DeviceWrapper> {
+fn get_filtered_devices(name: &[StringFilter], path: &[StringFilter], physical_path: &[StringFilter]) -> Vec<DeviceWrapper> {
     DeviceWrapper::list_wrapped_divices()
         .into_iter()
         .filter(|device_wrapper| {

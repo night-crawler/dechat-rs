@@ -4,7 +4,7 @@ use crate::cmd::Command;
 use crate::device_wrapper::DeviceWrapper;
 
 trait Colorizer<T> {
-    fn write_arg(&mut self, key: &str, value: T) -> std::io::Result<()>;
+    fn write_kv_pair(&mut self, key: &str, value: T) -> std::io::Result<()>;
 }
 
 impl<Q, T: std::fmt::Display> Colorizer<T> for Q
@@ -12,7 +12,7 @@ where
     Q: std::io::Write,
 {
     #[inline(always)]
-    fn write_arg(&mut self, key: &str, value: T) -> std::io::Result<()> {
+    fn write_kv_pair(&mut self, key: &str, value: T) -> std::io::Result<()> {
         write!(self, "{}={}", key.blue(), value.to_string().magenta())
     }
 }
@@ -65,24 +65,24 @@ impl<'a> DevicePrinter<'a> {
         let device = &self.wrapper.device;
         let path = &self.wrapper.path;
         if self.display_opts.path {
-            f.write_arg("path", path.display())?;
+            f.write_kv_pair("path", path.display())?;
         }
 
         if self.display_opts.physical_path {
-            f.write_arg(" physical_path", device.physical_path().unwrap_or("?"))?;
+            f.write_kv_pair(" physical_path", device.physical_path().unwrap_or("?"))?;
         }
 
         if self.display_opts.name {
-            f.write_arg(" name", device.name().unwrap_or("?"))?;
+            f.write_kv_pair(" name", device.name().unwrap_or("?"))?;
         }
 
         if self.display_opts.id {
             let input_id = device.input_id();
-            f.write_arg(" bus", input_id.bus_type())?;
-            f.write_arg(" bus_id", format!("{:#x}", input_id.bus_type().0))?;
-            f.write_arg(" vendor", format!("{:#x}", input_id.vendor()))?;
-            f.write_arg(" product", format!("{:#x}", input_id.product()))?;
-            f.write_arg(" version", format!("{:#x}", input_id.version()))?;
+            f.write_kv_pair(" bus", input_id.bus_type())?;
+            f.write_kv_pair(" bus_id", format!("{:#x}", input_id.bus_type().0))?;
+            f.write_kv_pair(" vendor", format!("{:#x}", input_id.vendor()))?;
+            f.write_kv_pair(" product", format!("{:#x}", input_id.product()))?;
+            f.write_kv_pair(" version", format!("{:#x}", input_id.version()))?;
         }
 
         if self.display_opts.keys {

@@ -42,23 +42,24 @@ pub(super) enum Command {
         all: bool,
     },
 
-    /// Grab the device and de-chatter it
+    /// Grab the device and de-chatter it.
+    /// Filters support prefixes: s: starts with, e: ends with, c: contains, no prefix means equals.
     DeChatter {
         /// Inclusive ranges of keys to de-chatter, in format <start>:<end>:<timeout_ms> (repeatable)
         #[arg(short, long, value_parser = parse_key_range)]
         timeouts: Vec<KeyRangeTimeout>,
 
-        /// Filter devices by name (repeatable)
+        /// Repeatable device name filter (Example: -n s:'Asus')
         #[arg(short, long, value_parser = parse_filter)]
-        name: Vec<Filter>,
+        name: Vec<StringFilter>,
 
-        /// Filter devices by path (repeatable)
+        /// Repeatable device path filter (Example: -p '/dev/input/event10')
         #[arg(short, long, value_parser = parse_filter)]
-        path: Vec<Filter>, // TODO: path filter must be PathBuf/OsString, not String
+        path: Vec<StringFilter>, // TODO: path filter must be PathBuf/OsString, not String
 
-        /// Filter devices by physical path (repeatable)
+        /// Repeatable device physical path filter (Example: -P 'usb-0000:04:00.3-3/input2')
         #[arg(short = 'P', long, value_parser = parse_filter)]
-        physical_path: Vec<Filter>,
+        physical_path: Vec<StringFilter>,
 
         /// Take the device with this index after applying all filters
         #[arg(short = 'i', long, default_value_t = 0)]
@@ -67,21 +68,21 @@ pub(super) enum Command {
 }
 
 #[derive(Debug, Clone)]
-pub(super) enum Filter {
+pub(super) enum StringFilter {
     StartsWidth(Arc<str>),
     Equals(Arc<str>),
     Contains(Arc<str>),
     EndsWidth(Arc<str>),
 }
 
-impl Filter {
+impl StringFilter {
     pub(super) fn matches(&self, raw: impl AsRef<str>) -> bool {
         let raw = raw.as_ref();
         match self {
-            Filter::StartsWidth(filter) => raw.starts_with(filter.as_ref()),
-            Filter::Equals(filter) => raw == filter.as_ref(),
-            Filter::Contains(filter) => raw.contains(filter.as_ref()),
-            Filter::EndsWidth(filter) => raw.ends_with(filter.as_ref()),
+            StringFilter::StartsWidth(filter) => raw.starts_with(filter.as_ref()),
+            StringFilter::Equals(filter) => raw == filter.as_ref(),
+            StringFilter::Contains(filter) => raw.contains(filter.as_ref()),
+            StringFilter::EndsWidth(filter) => raw.ends_with(filter.as_ref()),
         }
     }
 }
@@ -120,15 +121,15 @@ fn parse_key_range(raw: &str) -> Result<KeyRangeTimeout, String> {
     Ok(KeyRangeTimeout { range, timeout })
 }
 
-fn parse_filter(raw: &str) -> Result<Filter, String> {
+fn parse_filter(raw: &str) -> Result<StringFilter, String> {
     if let Some(raw) = raw.strip_prefix("s:") {
-        Ok(Filter::StartsWidth(raw.into()))
+        Ok(StringFilter::StartsWidth(raw.into()))
     } else if let Some(raw) = raw.strip_prefix("e:") {
-        Ok(Filter::EndsWidth(raw.into()))
+        Ok(StringFilter::EndsWidth(raw.into()))
     } else if let Some(raw) = raw.strip_prefix("c:") {
-        Ok(Filter::Contains(raw.into()))
+        Ok(StringFilter::Contains(raw.into()))
     } else {
-        Ok(Filter::Equals(raw.into()))
+        Ok(StringFilter::Equals(raw.into()))
     }
 }
 

@@ -1,0 +1,11 @@
+[Unit]
+Description=Keyboard DeChattering Service
+
+[Service]
+ExecStart=/usr/bib/dechat-rs de-chatter -t 0:1000:70 -n s:'Asus Keyboard' -P 'usb-0000:04:00.3-3/input2'
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
