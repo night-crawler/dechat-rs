@@ -1,6 +1,6 @@
 [package]
 name = "dechat-rs"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Debounce / de-chattering utility for key input devices"
 authors = ["night-crawler"]
