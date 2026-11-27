@@ -14,6 +14,7 @@ anyhow = "1"
 log = "0.4"
 clap = { version = "4.6", features = ["derive", "env"] }
 colored = "3"
+nix = { version = "0.29", features = ["poll"] }
 
 [profile.release]
 lto = true

@@ -15,7 +15,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - run: cargo install cargo-get
     - uses: actions/checkout@v4
     - name: Build
       run: cargo build --verbose
