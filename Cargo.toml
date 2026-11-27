@@ -1,7 +1,7 @@
 [package]
 name = "dechat-rs"
 version = "0.2.0"
-edition = "2021"
+edition = "2024"
 description = "Debounce / de-chattering utility for key input devices"
 authors = ["night-crawler"]
 license = "MIT"
@@ -9,13 +9,70 @@ readme = "README.md"
 
 [dependencies]
 env_logger = "0.11"
-evdev = { git = "https://github.com/emberian/evdev", rev = "8feea0685b0acb8153e394ffc393cf560d30a16f" }
+evdev = "0.13.2"
 anyhow = "1"
 log = "0.4"
-clap = { version = "4.4", features = ["derive", "env"] }
-colored = { version = "2" }
+clap = { version = "4.6", features = ["derive", "env"] }
+colored = "3"
 
 [profile.release]
 lto = true
 codegen-units = 1
 opt-level = 3
+
+[lints]
+workspace = true
+
+[workspace.lints]
+clippy.allow_attributes = "warn"
+clippy.as_pointer_underscore = "warn"
+clippy.as_underscore = "warn"
+clippy.borrow_as_ptr = "warn"
+clippy.cast_lossless = "warn"
+clippy.cast_possible_truncation = "warn"
+clippy.cast_possible_wrap = "warn"
+clippy.cast_ptr_alignment = "warn"
+clippy.cast_sign_loss = "warn"
+clippy.clone_on_ref_ptr = "warn"
+clippy.cloned_instead_of_copied = "warn"
+clippy.comparison_chain = "warn"
+clippy.debug_assert_with_mut_call = "warn"
+clippy.elidable_lifetime_names = "warn"
+clippy.equatable_if_let = "warn"
+clippy.explicit_into_iter_loop = "warn"
+clippy.explicit_iter_loop = "warn"
+clippy.filter_map_next = "warn"
+clippy.flat_map_option = "warn"
+clippy.format_collect = "warn"
+clippy.format_push_string = "warn"
+clippy.ignored_unit_patterns = "warn"
+clippy.implicit_clone = "warn"
+clippy.inefficient_to_string = "warn"
+clippy.items_after_statements = "warn"
+clippy.iter_on_empty_collections = "warn"
+clippy.iter_on_single_items = "warn"
+clippy.iter_with_drain = "warn"
+clippy.manual_is_variant_and = "warn"
+clippy.manual_let_else = "warn"
+clippy.manual_midpoint = "warn"
+clippy.match_same_arms = "warn"
+clippy.module_name_repetitions = "warn"
+clippy.multiple_inherent_impl = "warn"
+clippy.needless_pass_by_value = "warn"
+clippy.or_fun_call = "warn"
+clippy.rc_buffer = "warn"
+clippy.redundant_closure_for_method_calls = "warn"
+clippy.redundant_pub_crate = "warn"
+# clippy.redundant_test_prefix = "warn" # TODO: reengage once supported on stable
+clippy.ref_option = "warn"
+clippy.ref_option_ref = "warn"
+clippy.str_to_string = "warn"
+clippy.suboptimal_flops = "warn"
+clippy.uninlined_format_args = "allow"
+clippy.unnecessary_self_imports = "warn"
+clippy.unneeded_field_pattern = "warn"
+clippy.unnested_or_patterns = "warn"
+clippy.unused_trait_names = "warn"
+clippy.missing_const_for_fn = "warn"
+
+rust.unfulfilled_lint_expectations = "warn"

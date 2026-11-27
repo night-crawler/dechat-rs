@@ -8,7 +8,7 @@ use log::{debug, error, info, trace, warn};
 use crate::cmd::KeyRangeTimeout;
 use crate::key_state::KeyState;
 
-pub(super) struct KeyFilter {
+pub struct KeyFilter {
     key_timeouts: Vec<Option<Duration>>,
     tracker: Vec<KeyState>,
     orig_keyboard: Device,
@@ -19,7 +19,7 @@ pub(super) struct KeyFilter {
 }
 
 impl KeyFilter {
-    pub(super) fn new(
+    pub fn new(
         timeouts: Vec<KeyRangeTimeout>,
         orig_keyboard: Device,
         fake_keyboard: VirtualDevice,
@@ -29,7 +29,7 @@ impl KeyFilter {
             .supported_keys()
             .iter()
             .flat_map(|attribute_set| attribute_set.iter())
-            .map(|key_code| key_code.to_index())
+            .map(EvdevEnum::to_index)
             .max()
             .unwrap_or_default();
 
@@ -75,7 +75,7 @@ impl KeyFilter {
         }
     }
 
-    pub(super) fn block(&mut self) -> anyhow::Result<()> {
+    pub fn block(&mut self) -> anyhow::Result<()> {
         if self.skip_first {
             for event in self.orig_keyboard.fetch_events()? {
                 info!("Skipping {:?}", event);
@@ -136,9 +136,8 @@ impl KeyFilter {
 }
 
 fn should_filter(orig_event: InputEvent, key_timeouts: &[Option<Duration>], tracker: &mut [KeyState]) -> bool {
-    let (key_code, key_state) = match orig_event.destructure() {
-        EventSummary::Key(_, key_code, key_state) => (key_code, key_state),
-        _ => return false,
+    let EventSummary::Key(_, key_code, key_state) = orig_event.destructure() else {
+        return false;
     };
     let Some(&Some(max_duration)) = key_timeouts.get(key_code.to_index()) else {
         debug!("Key code {key_code:?} cannot be throttled");

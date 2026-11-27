@@ -8,13 +8,13 @@ use clap::{Parser, Subcommand};
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 #[command(propagate_version = true)]
-pub(super) struct Cli {
+pub struct Cli {
     #[command(subcommand)]
-    pub(super) command: Command,
+    pub command: Command,
 }
 
 #[derive(Subcommand, Debug)]
-pub(super) enum Command {
+pub enum Command {
     /// List all input devices
     List {
         /// Show the path to the input device
@@ -74,7 +74,7 @@ pub(super) enum Command {
 }
 
 #[derive(Debug, Clone)]
-pub(super) enum StringFilter {
+pub enum StringFilter {
     StartsWidth(Arc<str>),
     Equals(Arc<str>),
     Contains(Arc<str>),
@@ -82,7 +82,7 @@ pub(super) enum StringFilter {
 }
 
 impl StringFilter {
-    pub(super) fn matches(&self, raw: impl AsRef<str>) -> bool {
+    pub fn matches(&self, raw: impl AsRef<str>) -> bool {
         let raw = raw.as_ref();
         match self {
             StringFilter::StartsWidth(filter) => raw.starts_with(filter.as_ref()),
@@ -94,9 +94,9 @@ impl StringFilter {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct KeyRangeTimeout {
-    pub(super) range: RangeInclusive<u16>,
-    pub(super) timeout: Duration,
+pub struct KeyRangeTimeout {
+    pub range: RangeInclusive<u16>,
+    pub timeout: Duration,
 }
 
 fn parse_key_range(raw: &str) -> Result<KeyRangeTimeout, String> {
@@ -118,7 +118,7 @@ fn parse_key_range(raw: &str) -> Result<KeyRangeTimeout, String> {
         return Err(format!("Invalid empty range set for key range {}", raw));
     }
 
-    let timeout = Duration::from_millis(parts[2] as u64);
+    let timeout = Duration::from_millis(u64::from(parts[2]));
 
     if timeout.as_millis() == 0 {
         return Err(format!("Invalid zero timeout set for key range {}", raw));

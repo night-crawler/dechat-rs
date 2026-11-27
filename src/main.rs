@@ -1,8 +1,8 @@
-use clap::Parser;
+use clap::Parser as _;
 use env_logger::Env;
 
 use crate::cmd::Cli;
-use crate::traits::Execute;
+use crate::traits::Execute as _;
 
 mod cmd;
 mod device_wrapper;

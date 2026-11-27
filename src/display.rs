@@ -1,4 +1,4 @@
-use colored::Colorize;
+use colored::Colorize as _;
 
 use crate::cmd::Command;
 use crate::device_wrapper::DeviceWrapper;
@@ -17,7 +17,7 @@ where
     }
 }
 
-pub(super) struct DisplayOpts {
+pub struct DisplayOpts {
     path: bool,
     physical_path: bool,
     name: bool,
@@ -51,17 +51,17 @@ impl TryFrom<Command> for DisplayOpts {
     }
 }
 
-pub(super) struct DevicePrinter<'a> {
+pub struct DevicePrinter<'a> {
     wrapper: &'a DeviceWrapper,
     display_opts: &'a DisplayOpts,
 }
 
 impl<'a> DevicePrinter<'a> {
-    pub(super) fn new(wrapper: &'a DeviceWrapper, display_opts: &'a DisplayOpts) -> DevicePrinter<'a> {
+    pub const fn new(wrapper: &'a DeviceWrapper, display_opts: &'a DisplayOpts) -> Self {
         Self { wrapper, display_opts }
     }
 
-    pub(super) fn print(&self, f: &mut impl std::io::Write) -> std::io::Result<()> {
+    pub fn print(&self, f: &mut impl std::io::Write) -> std::io::Result<()> {
         let device = &self.wrapper.device;
         let path = &self.wrapper.path;
         if self.display_opts.path {

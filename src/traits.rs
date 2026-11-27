@@ -1,11 +1,11 @@
 use evdev::uinput::VirtualDevice;
 use std::path::PathBuf;
 
-pub(super) trait Execute {
+pub trait Execute {
     fn execute(self) -> anyhow::Result<()>;
 }
 
-pub(super) trait DeviceExt {
+pub trait DeviceExt {
     fn paths(&mut self) -> anyhow::Result<Vec<PathBuf>>;
 }
 
