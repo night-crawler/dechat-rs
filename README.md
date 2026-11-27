@@ -68,6 +68,16 @@ Install the package:
 sudo pacman -U dechat-rs-*.pkg.tar.zst
 ```
 
+---
+
+## Automated Configuration (Wizard)
+
+If you prefer an interactive wizard to configure systemd services without manual editing, use the included `dechat-manager.sh` script. This script handles device detection, debounce testing, and persistent service creation for you.
+
+👉 **[Check out the Manager Guide (MANAGER.md)](MANAGER.md)**
+
+---
+
 ## Usage
 
 Root access is required.
