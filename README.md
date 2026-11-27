@@ -3,11 +3,12 @@
 `dechat-rs` is a tool written in Rust, aimed at reducing keyboard chatter / debouncing.
 
 Features:
+
 - Customizable throttling timeouts for multiple keys or key ranges.
 - Enhanced handling for repeated chatter scenarios.
 
 Most de-chatter solutions simply block the next input if it matches the previous key code and immediately forget that
-key if it was released. However, that approach doesn't always cut it. There are often cases of multiple subsequent 
+key if it was released. However, that approach doesn't always cut it. There are often cases of multiple subsequent
 bounces, like in "retr**t**ack", "plau**l**sible", "pottery**y**", etc.
 
 This approach ensures that no key code repeats within a predefined time frame.
@@ -79,8 +80,8 @@ Devices are sorted by bus, vendor, product, version, name, and path for consiste
 Usage: dechat-rs list [OPTIONS]
 
 Options:
-  -p, --path           Show the path to the input device
-  -P, --physical-path  Show the physical path to the input device
+  -p, --path           Show the path to the input device (default unless -P, -n or -i is given)
+  -P, --physical-path  Show the physical path to the input device (default unless -p, -n or -i is given)
   -n, --name           Show the name of the input device
   -i, --id             Show the bus, vendor, product, and version of the input device
   -k, --keys           Show all keys supported by the input device
@@ -89,11 +90,12 @@ Options:
   -V, --version        Print version
 ```
 
-List all devices: 
+List all devices:
 
 ```bash
 sudo dechat-rs list
 ```
+
 ```
 path=/dev/input/event9 physical_path=ALSA
 path=/dev/input/event11 physical_path=ALSA
@@ -120,20 +122,25 @@ path=/dev/input/event6 physical_path=asus-wireless/input0 name=Asus Wireless Rad
 
 ### Start de-chattering
 
-To de-chatter a specific device, use filters based on the device name. 
+To de-chatter a specific device, use filters based on the device name.
 If multiple devices share a name, use these filters for distinction:
-- `s:` - starts with (i.e. `de-chatter -t 0:1000:70 -n s:'Asus Keyboard' -P 'usb-0000:04:00.3-3/input2'`)
-- `e:` or no prefix - equals 
-- `c:` - contains
 
-If filters aren't sufficient, use `--id` or `-i` to select by device index as shown in the de-chatter sub-command output:
+- `s:` - starts with (i.e. `de-chatter -t 0:1000:70 -n s:'Asus Keyboard' -P 'usb-0000:04:00.3-3/input2'`)
+- `e:` - ends with
+- `c:` - contains
+- no prefix - equals
+
+Repeated filters must all match.
+
+If filters aren't sufficient, use `--index` or `-i` to select by device index as shown in the de-chatter sub-command
+output:
 
 ```bash
 sudo dechat-rs de-chatter -t 0:1000:70 -n s:'Asus'
-[2024-01-30T17:18:43Z INFO  dechat_rs::execute] A device with index=0 after applying filters: Asus Keyboard (/dev/input/event4)
-[2024-01-30T17:18:43Z INFO  dechat_rs::execute] A device with index=1 after applying filters: Asus Keyboard (/dev/input/event5)
-[2024-01-30T17:18:43Z INFO  dechat_rs::execute] A device with index=2 after applying filters: Asus WMI hotkeys (/dev/input/event8)
-[2024-01-30T17:18:43Z INFO  dechat_rs::execute] A device with index=3 after applying filters: Asus Wireless Radio Control (/dev/input/event6)
+[2024-01-30T17:18:43Z INFO  dechat_rs::execute] A device with index=0 after applying filters: Asus Keyboard usb-0000:04:00.3-3/input0 [/dev/input/event4]
+[2024-01-30T17:18:43Z INFO  dechat_rs::execute] A device with index=1 after applying filters: Asus Keyboard usb-0000:04:00.3-3/input2 [/dev/input/event5]
+[2024-01-30T17:18:43Z INFO  dechat_rs::execute] A device with index=2 after applying filters: Asus WMI hotkeys asus-nb-wmi/input0 [/dev/input/event8]
+[2024-01-30T17:18:43Z INFO  dechat_rs::execute] A device with index=3 after applying filters: Asus Wireless Radio Control asus-wireless/input0 [/dev/input/event6]
 ```
 
 Pass throttling timeouts with key codes to filter. Format: `start_code_inclusive:end_code_inclusive:timeout`, e.g.:
@@ -144,11 +151,24 @@ sudo -E dechat-rs de-chatter -t 0:1000:70 -n 'Asus Keyboard' -P 'usb-0000:04:00.
 
 If the specified range is too large, it will be adjusted to the maximum supported range.
 
-Periodically, the tool will display statistics about the number of throttled events:
+The tool has two rules for each key:
+
+- A press that comes within the timeout after the release is dropped.
+- A release that comes within the timeout after the press is delayed until the timeout is over, or until you press
+  another key. If the key goes down again while the release waits, it was a bounce, and the key just stays pressed.
+
+So you can still hold a key that chatters on the way down. The price is that a very quick tap lasts as long as the
+timeout.
+
+Periodically, the tool will display statistics about the number of throttled key presses:
 
 ``` 
 [2024-01-30T16:58:33Z INFO  dechat_rs::key_filter] Throttled: KEY_BACKSPACE:14x13, KEY_E:18x2, KEY_Y:21x2, KEY_O:24x2, KEY_ENTER:28x10, KEY_LEFTCTRL:29x135, KEY_LEFTSHIFT:42x73, KEY_N:49x2, KEY_LEFTALT:56x6, KEY_UP:103x44, KEY_LEFT:105x10, KEY_RIGHT:106x19, KEY_DOWN:108x223
 ```
+
+The `LOG_LEVEL` environment variable sets the log level (`info` by default).
+With `LOG_LEVEL=debug` the tool logs every throttled key press with its key code as it happens.
+This helps you pick the timeouts, but everyone who can read the log sees a part of what you type.
 
 ### Systemd service
 
@@ -165,7 +185,7 @@ Or create a new file with the following content:
 Description=Keyboard DeChattering Service
 
 [Service]
-ExecStart=/usr/bib/dechat-rs de-chatter -t 0:1000:70 -n s:'Asus Keyboard' -P 'usb-0000:04:00.3-3/input2'
+ExecStart=/usr/bin/dechat-rs de-chatter -t 0:1000:70 -n s:'Asus Keyboard' -P 'usb-0000:04:00.3-3/input2'
 
 Restart=always
 RestartSec=10
@@ -196,6 +216,6 @@ sudo systemctl status dechat
 journalctl -xefu dechat.service
 ```
 
-### Udev 
+### Udev
 
 TODO

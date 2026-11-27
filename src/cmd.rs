@@ -17,28 +17,28 @@ pub struct Cli {
 pub enum Command {
     /// List all input devices
     List {
-        /// Show the path to the input device
-        #[arg(short, long, default_value = "true")]
+        /// Show the path to the input device (default unless -P, -n or -i is given)
+        #[arg(short, long)]
         path: bool,
 
-        /// Show the physical path to the input device
-        #[arg(short = 'P', long, default_value = "true")]
+        /// Show the physical path to the input device (default unless -p, -n or -i is given)
+        #[arg(short = 'P', long)]
         physical_path: bool,
 
         /// Show the name of the input device
-        #[arg(short, long, default_value = "false")]
+        #[arg(short, long)]
         name: bool,
 
         /// Show the bus, vendor, product, and version of the input device
-        #[arg(short, long, default_value = "false")]
+        #[arg(short, long)]
         id: bool,
 
         /// Show all keys supported by the input device
-        #[arg(short, long, default_value = "false")]
+        #[arg(short, long)]
         keys: bool,
 
         /// Enable all flags: (-Ppnik)
-        #[arg(short, long, default_value = "false")]
+        #[arg(short, long)]
         all: bool,
     },
 
@@ -46,7 +46,7 @@ pub enum Command {
     /// Filters support prefixes: s: starts with, e: ends with, c: contains, no prefix means equals.
     DeChatter {
         /// Inclusive ranges of keys to de-chatter, in format <start>:<end>:<timeout_ms> (repeatable)
-        #[arg(short, long, value_parser = parse_key_range)]
+        #[arg(short, long, required = true, value_parser = parse_key_range)]
         timeouts: Vec<KeyRangeTimeout>,
 
         /// Repeatable device name filter (Example: -n s:'Asus')
@@ -64,31 +64,25 @@ pub enum Command {
         /// Take the device with this index after applying all filters
         #[arg(short = 'i', long, default_value_t = 0)]
         index: usize,
-
-        /// Skip the first event batch: if we start the program is started from terminal,
-        /// the last ENTER key we press gets stuck, and also it alarms the touchegg service -
-        /// `Touchpad: kernel bug: Touch jump detected and discarded.`
-        #[arg(short = 's', long, default_value_t = false)]
-        skip_first: bool,
     },
 }
 
 #[derive(Debug, Clone)]
 pub enum StringFilter {
-    StartsWidth(Arc<str>),
+    StartsWith(Arc<str>),
     Equals(Arc<str>),
     Contains(Arc<str>),
-    EndsWidth(Arc<str>),
+    EndsWith(Arc<str>),
 }
 
 impl StringFilter {
     pub fn matches(&self, raw: impl AsRef<str>) -> bool {
         let raw = raw.as_ref();
         match self {
-            StringFilter::StartsWidth(filter) => raw.starts_with(filter.as_ref()),
+            StringFilter::StartsWith(filter) => raw.starts_with(filter.as_ref()),
             StringFilter::Equals(filter) => raw == filter.as_ref(),
             StringFilter::Contains(filter) => raw.contains(filter.as_ref()),
-            StringFilter::EndsWidth(filter) => raw.ends_with(filter.as_ref()),
+            StringFilter::EndsWith(filter) => raw.ends_with(filter.as_ref()),
         }
     }
 }
@@ -129,9 +123,9 @@ fn parse_key_range(raw: &str) -> Result<KeyRangeTimeout, String> {
 
 fn parse_filter(raw: &str) -> Result<StringFilter, String> {
     if let Some(raw) = raw.strip_prefix("s:") {
-        Ok(StringFilter::StartsWidth(raw.into()))
+        Ok(StringFilter::StartsWith(raw.into()))
     } else if let Some(raw) = raw.strip_prefix("e:") {
-        Ok(StringFilter::EndsWidth(raw.into()))
+        Ok(StringFilter::EndsWith(raw.into()))
     } else if let Some(raw) = raw.strip_prefix("c:") {
         Ok(StringFilter::Contains(raw.into()))
     } else {
@@ -157,5 +151,23 @@ mod tests {
         assert!(parse_key_range("0:0:0").is_err());
         assert!(parse_key_range("0:0:1").is_ok());
         assert!(parse_key_range("1:0:1").is_err());
+        assert!(parse_key_range("1:2:x").is_err());
+        assert!(parse_key_range("1:2:65536").is_err());
+    }
+
+    #[test]
+    fn test_parse_filter() {
+        use super::*;
+        let cases = [
+            ("Asus Keyboard", "Asus Keyboard", "Asus"),
+            ("s:Asus", "Asus Keyboard", "My Asus"),
+            ("e:board", "Asus Keyboard", "board 2"),
+            ("c:s K", "Asus Keyboard", "Asus"),
+        ];
+        for (raw, matching, other) in cases {
+            let filter = parse_filter(raw).unwrap();
+            assert!(filter.matches(matching), "{raw} must match {matching}");
+            assert!(!filter.matches(other), "{raw} must not match {other}");
+        }
     }
 }

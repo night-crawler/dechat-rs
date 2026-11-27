@@ -162,6 +162,7 @@ dependencies = [
  "env_logger",
  "evdev",
  "log",
+ "nix",
 ]
 
 [[package]]
